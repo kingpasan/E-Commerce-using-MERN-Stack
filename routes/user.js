@@ -11,6 +11,6 @@ router.get("/secret/:userID", requireSignin, (req, res) => {
     });
 });
 
-router.param('userId', userByID);
+router.param('userID', userByID);
 
 module.exports = router;

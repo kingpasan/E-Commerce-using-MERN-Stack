@@ -167,24 +167,24 @@ exports.listRelated = (req, res) => {
 
     let limit = req.query.limit ? parseInt(req.query.limit) : 6;
 
-    Product.find({ _id: {$ne: req.product}, category: req.product.category })
-    .limit(limit)
-    .populate('category', '_id name')
-    .exec((err, products)=>{
-        if (err) {
-            return res.status(400).json({
-                error: "product not found"
-            });
-        }
+    Product.find({ _id: { $ne: req.product }, category: req.product.category })
+        .limit(limit)
+        .populate('category', '_id name')
+        .exec((err, products) => {
+            if (err) {
+                return res.status(400).json({
+                    error: "product not found"
+                });
+            }
 
-        res.json(products);
+            res.json(products);
 
-    });
+        });
 
 };
 
 exports.listCategories = (req, res) => {
-    Product.distinct("category", {}, (err, categories) =>{
+    Product.distinct("category", {}, (err, categories) => {
         if (err) {
             return res.status(400).json({
                 error: "Categories not found"
@@ -194,4 +194,58 @@ exports.listCategories = (req, res) => {
         res.json(categories);
 
     });
+};
+
+exports.listBySearch = (req, res) => {
+    let order = req.body.order ? req.body.order : "desc";
+    let sortBy = req.body.sortBy ? req.body.sortBy : "_id";
+    let limit = req.body.limit ? parseInt(req.body.limit) : 100;
+    let skip = parseInt(req.body.skip);
+    let findArgs = {};
+
+    for(let key in req.body.filters){
+        if (req.body.filters[key].lenght > 0) {
+            if(key === "price"){
+
+                findArgs[key] = {
+                    $gte:req.body.filters[key][0],
+                    $lte:req.body.filters[key][1]
+                };
+            }
+            else{
+                findArgs[key] = req.body.filters[key];
+            }
+        }
+    }
+
+    Product.find(findArgs)
+    .select("-photo")
+    .populate("category")
+    .sort([[ sortBy, order]])
+    .skip(skip)
+    .limit(limit)
+    .exec((err, data)=>{
+
+        if (err) {
+            return res.status(400).json({
+                error: "Products not found"
+            });
+        }
+
+        res.json({
+            size: data.length,
+            data
+        })
+    })
+};
+
+
+exports.photo = (req, res, next) =>{
+
+    if (req.product.photo.data) {
+        res.set('Content-Type', req.product.photo.contentType);
+        return res.send(req.product.photo.data);
+    }
+
+    next();
 };
